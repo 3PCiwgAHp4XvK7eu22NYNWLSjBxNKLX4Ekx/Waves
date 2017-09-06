@@ -38,7 +38,7 @@ package object history {
   val DefaultWavesSettings: WavesSettings = settings.copy(blockchainSettings = DefaultBlockchainSettings)
 
   def domain(settings: WavesSettings): Domain = {
-    val (history, _, _, stateReader, blockchainUpdater, _, _) = StorageFactory(settings).get
+    val (history, stateReader, blockchainUpdater, _) = StorageFactory(settings, ???, ???)
     Domain(history, stateReader, blockchainUpdater)
   }
 

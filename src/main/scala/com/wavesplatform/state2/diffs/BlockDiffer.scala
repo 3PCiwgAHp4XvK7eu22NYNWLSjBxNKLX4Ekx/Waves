@@ -3,6 +3,7 @@ package com.wavesplatform.state2.diffs
 import cats.Monoid
 import cats.data.{NonEmptyList => NEL}
 import cats.implicits._
+import cats.kernel.Semigroup
 import com.wavesplatform.features.{BlockchainFeatures, FeatureProvider}
 import com.wavesplatform.metrics.Instrumented
 import com.wavesplatform.settings.FunctionalitySettings
@@ -19,7 +20,6 @@ import scorex.transaction.ValidationError.ActivationError
 import scorex.transaction.{History, Transaction, ValidationError}
 import scorex.utils.ScorexLogging
 
-import scala.collection.SortedMap
 import scala.concurrent.Await
 import scala.concurrent.duration.Duration
 
@@ -110,17 +110,25 @@ object BlockDiffer extends ScorexLogging with Instrumented {
         Monoid.combine(diffWithCancelledLeases, CancelLeaseOverflow(composite(diffWithCancelledLeases.asBlockDiff, s)))
       else diffWithCancelledLeases
 
+      implicit val g: Semigroup[Map[ByteStr, Long]] = (x: Map[ByteStr, Long], y: Map[ByteStr, Long]) =>
+        x.keySet.map { k =>
+          val sum = safeSum(x.getOrElse(k, 0L), y.getOrElse(k, 0L))
+          require(sum >= 0, s"Negative balance $sum for asset $k, available: ${x.getOrElse(k, 0L)}")
+          k -> sum
+        }.toMap
+
       val newSnapshots = diffWithLeasePatches.portfolios
-        .collect { case (acc, portfolioDiff) if portfolioDiff.balance != 0 || portfolioDiff.effectiveBalance != 0 =>
-          val oldPortfolio = s.partialPortfolio(acc, Set.empty[ByteStr])
-          if (s.lastUpdateHeight(acc).contains(currentBlockHeight)) {
-            throw new Exception(s"CRITICAL: attempting to build a circular reference in snapshot list. " +
-              s"acc=$acc, currentBlockHeight=$currentBlockHeight")
+        .map { case (acc, portfolioDiff) =>
+          val oldPortfolio = s.wavesBalance(acc)
+          val newWavesBalance = if (portfolioDiff.balance != 0 || portfolioDiff.effectiveBalance != 0)
+            Some(WavesBalance(oldPortfolio.regularBalance + portfolioDiff.balance,
+              oldPortfolio.effectiveBalance + portfolioDiff.effectiveBalance))
+            else None
+          val stateAssetBalances = s.assetBalance(acc)
+          val assetBalances: Map[ByteStr, Long] = if (portfolioDiff.assets.isEmpty) Map.empty else {
+            Semigroup.combine(portfolioDiff.assets, stateAssetBalances)(g)
           }
-          acc -> SortedMap(currentBlockHeight -> Snapshot(
-            prevHeight = s.lastUpdateHeight(acc).getOrElse(0),
-            balance = oldPortfolio.balance + portfolioDiff.balance,
-            effectiveBalance = oldPortfolio.effectiveBalance + portfolioDiff.effectiveBalance))
+          acc -> Snapshot(newWavesBalance, assetBalances = assetBalances)
         }
       BlockDiff(diffWithLeasePatches, heightDiff, newSnapshots)
     }

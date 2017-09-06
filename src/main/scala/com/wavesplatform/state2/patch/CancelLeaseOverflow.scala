@@ -10,10 +10,12 @@ object CancelLeaseOverflow {
 
     def cancelLeaseOut(l: LeaseInfo): LeaseInfo = LeaseInfo(0, -l.leaseOut)
 
-    val portfolioUpd = s.accountPortfolios
+    s.activeLeases
+
+    val portfolioUpd: Map[Address, Portfolio] = ???/*s.accountPortfolios
       .collect { case (acc, pf) if pf.spendableBalance < 0 =>
         acc -> Portfolio(0, cancelLeaseOut(pf.leaseInfo), Map.empty)
-      }
+      }*/
 
     val cancelledLeases = for {
       a <- portfolioUpd.keys

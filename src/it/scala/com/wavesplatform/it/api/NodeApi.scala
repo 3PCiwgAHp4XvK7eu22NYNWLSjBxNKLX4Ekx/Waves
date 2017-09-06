@@ -7,7 +7,7 @@ import com.wavesplatform.features.api.ActivationStatus
 import com.wavesplatform.it.util.GlobalTimer.{instance => timer}
 import com.wavesplatform.it.util._
 import com.wavesplatform.matcher.api.CancelOrderRequest
-import com.wavesplatform.state2.{ByteStr, Portfolio}
+import com.wavesplatform.state2.{ByteStr, WavesBalance}
 import org.asynchttpclient.Dsl.{asyncHttpClient, get => _get, post => _post}
 import org.asynchttpclient._
 import org.asynchttpclient.util.HttpConstants
@@ -20,7 +20,6 @@ import scorex.api.http.assets._
 import scorex.api.http.leasing.{LeaseCancelRequest, LeaseRequest}
 import scorex.transaction.assets.exchange.Order
 import scorex.utils.{LoggerFacade, ScorexLogging}
-import scorex.waves.http.DebugApiRoute._
 import scorex.waves.http.DebugMessage._
 import scorex.waves.http.{DebugMessage, RollbackParams}
 
@@ -357,8 +356,8 @@ trait NodeApi {
   def debugStateAt(height: Long): Future[Map[String, Long]] = get(s"/debug/stateWaves/$height").as[Map[String, Long]]
 
   def debugPortfoliosFor(address: String, considerUnspent: Boolean) = {
-    getWithApiKey(s"/debug/portfolios/$address?considerUnspent=$considerUnspent")
-  }.as[Portfolio]
+    getWihApiKey(s"/debug/portfolios/$address?considerUnspent=$considerUnspent")
+  }.as[WavesBalance]
 
 }
 

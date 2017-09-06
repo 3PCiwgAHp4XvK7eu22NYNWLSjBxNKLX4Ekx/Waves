@@ -1,7 +1,6 @@
 package com.wavesplatform.state2.diffs
 
 import cats._
-import com.wavesplatform.state2._
 import com.wavesplatform.{NoShrink, TransactionGen}
 import org.scalacheck.{Arbitrary, Gen}
 import org.scalatest.prop.PropertyChecks
@@ -35,7 +34,8 @@ class AssetTransactionsDiffTest extends PropSpec
 
         val totalAssetVolume = issue.quantity + reissue.quantity - burn.amount
         newState.accountPortfolio(issue.sender).assets shouldBe Map(reissue.assetId -> totalAssetVolume)
-        newState.assetInfo(issue.id()) shouldBe Some(AssetInfo(reissue.reissuable, totalAssetVolume))
+//        newState().assetInfo(issue.id()) shouldBe Some(AssetInfo(reissue.reissuable, totalAssetVolume))
+        fail()
       }
     }
   }
